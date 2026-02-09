@@ -1,60 +1,108 @@
 /**
+ * Ten przykład demonstrdestruje jak używać ROS2 do wysyłania niskopoziomowych 
+ * komend sterowania silnikami robota humanoidalnego Unitree G1.
+ * 
+ * FUNKCJA: Program pokazuje sterowanie niskopoziomowe G1:
+ *          - Faza 1: Płynne przejście z aktualnej pozycji do pozycji zerowej
+ *          - Faza 2: Cykliczne ruchy kostek (pitch/roll) i nadgarstków
+ * 
+ * ⚠️ UWAGA BEZPIECZEŃSTWA:
+ *    - To sterowanie NISKOPOZIOMOWE - bezpośrednio kontroluje silniki!
+ *    - Nieprawidłowe wartości mogą spowodować gwałtowne ruchy
+ *    - Testuj tylko gdy robot jest bezpiecznie podparty/zawieszony
+ *    - Zawsze miej kontroler awaryjny w zasięgu ręki
+ * 
+ * CEL EDUKACYJNY: Zrozumienie:
+ *                 - Struktury robota G1 (29 stawów)
+ *                 - Sterowania PD (kp, kd)
+ *                 - Generowania trajektorii (interpolacja, funkcje trygonometryczne)
+ *                 - Trybu PR dla kostek
+ * 
  * This example demonstrates how to use ROS2 to send low-level motor commands of
- *unitree g1 robot
+ * unitree g1 robot
  **/
-#include "common/motor_crc_hg.h"
+#include "common/motor_crc_hg.h"     // Funkcje obliczania sumy kontrolnej CRC dla G1
 #include "rclcpp/rclcpp.hpp"
-#include "unitree_hg/msg/low_cmd.hpp"
-#include "unitree_hg/msg/low_state.hpp"
+#include "unitree_hg/msg/low_cmd.hpp"   // Typ wiadomości dla komend (G1)
+#include "unitree_hg/msg/low_state.hpp" // Typ wiadomości dla stanu (G1)
 #include "unitree_hg/msg/motor_cmd.hpp"
 
-constexpr bool INFO_IMU = false;    // Set 1 to info IMU states
-constexpr bool INFO_MOTOR = false;  // Set 1 to info motor states
+// ===== KONFIGURACJA PROGRAMU =====
+constexpr bool INFO_IMU = false;    
+// false = nie wyświetlaj danych IMU (upraszcza output)
+// Set 1 to info IMU states
+
+constexpr bool INFO_MOTOR = false;  
+// false = nie wyświetlaj stanów silników (upraszcza output)
+// Set 1 to info motor states
+
 constexpr bool HIGH_FREQ = true;
+// true = subskrybuj stan robota z częstotliwością 500Hz (potrzebne do sterowania)
 // Set 1 to subscribe to low states with high frequencies (500Hz)
 
-enum PRorAB { PR = 0, AB = 1 };
+// ===== TRYBY PRACY KOSTEK G1 =====
+// G1 ma specjalną cechę - kostki mogą pracować w dwóch trybach:
+enum PRorAB { 
+  PR = 0,  // Tryb PR - specjalny tryb kostek
+  AB = 1   // Tryb AB - standardowy (Ankle B/A)
+};
+// W tym przykładzie używamy trybu PR dla cyklicznych ruchów kostek
 
+// ===== LICZBA SILNIKÓW =====
 constexpr int G1_NUM_MOTOR = 29;
+// G1 ma 29 potencjalnych stawów (niektóre mogą być nieaktywne w wersji 23DoF)
 
+// ===== INDEKSY STAWÓW G1 =====
+// Enum dla łatwiejszego odwoływania się do konkretnych stawów
+// Zamiast pamiętać "silnik 18 to lewy łokieć" używamy nazwy LEFT_ELBOW
 enum G1JointIndex {
-  LEFT_HIP_PITCH = 0,
-  LEFT_HIP_ROLL = 1,
-  LEFT_HIP_YAW = 2,
-  LEFT_KNEE = 3,
-  LEFT_ANKLE_PITCH = 4,
-  LEFT_ANKLE_B = 4,
-  LEFT_ANKLE_ROLL = 5,
-  LEFT_ANKLE_A = 5,
-  RIGHT_HIP_PITCH = 6,
-  RIGHT_HIP_ROLL = 7,
-  RIGHT_HIP_YAW = 8,
-  RIGHT_KNEE = 9,
-  RIGHT_ANKLE_PITCH = 10,
-  RIGHT_ANKLE_B = 10,
-  RIGHT_ANKLE_ROLL = 11,
-  RIGHT_ANKLE_A = 11,
-  WAIST_YAW = 12,
-  WAIST_ROLL = 13,   // NOTE INVALID for g1 23dof/29dof with waist locked
-  WAIST_A = 13,      // NOTE INVALID for g1 23dof/29dof with waist locked
-  WAIST_PITCH = 14,  // NOTE INVALID for g1 23dof/29dof with waist locked
-  WAIST_B = 14,      // NOTE INVALID for g1 23dof/29dof with waist locked
-  LEFT_SHOULDER_PITCH = 15,
-  LEFT_SHOULDER_ROLL = 16,
-  LEFT_SHOULDER_YAW = 17,
-  LEFT_ELBOW = 18,
-  LEFT_WRIST_ROLL = 19,
-  LEFT_WRIST_PITCH = 20,  // NOTE INVALID for g1 23dof
-  LEFT_WRIST_YAW = 21,    // NOTE INVALID for g1 23dof
-  RIGHT_SHOULDER_PITCH = 22,
-  RIGHT_SHOULDER_ROLL = 23,
-  RIGHT_SHOULDER_YAW = 24,
-  RIGHT_ELBOW = 25,
-  RIGHT_WRIST_ROLL = 26,
-  RIGHT_WRIST_PITCH = 27,  // NOTE INVALID for g1 23dof
-  RIGHT_WRIST_YAW = 28     // NOTE INVALID for g1 23dof
+  // --- LEWA NOGA (0-5) ---
+  LEFT_HIP_PITCH = 0,      // Biodro lewe - ruch przód/tył
+  LEFT_HIP_ROLL = 1,       // Biodro lewe - ruch na boki
+  LEFT_HIP_YAW = 2,        // Biodro lewe - obrót
+  LEFT_KNEE = 3,           // Kolano lewe
+  LEFT_ANKLE_PITCH = 4,    // Kostka lewa - pitch (tryb AB)
+  LEFT_ANKLE_B = 4,        // Kostka lewa B (tryb PR) - TEN SAM indeks co PITCH
+  LEFT_ANKLE_ROLL = 5,     // Kostka lewa - roll (tryb AB)
+  LEFT_ANKLE_A = 5,        // Kostka lewa A (tryb PR) - TEN SAM indeks co ROLL
+  
+  // --- PRAWA NOGA (6-11) ---
+  RIGHT_HIP_PITCH = 6,     // Biodro prawe - ruch przód/tył
+  RIGHT_HIP_ROLL = 7,      // Biodro prawe - ruch na boki
+  RIGHT_HIP_YAW = 8,       // Biodro prawe - obrót
+  RIGHT_KNEE = 9,          // Kolano prawe
+  RIGHT_ANKLE_PITCH = 10,  // Kostka prawa - pitch (tryb AB)
+  RIGHT_ANKLE_B = 10,      // Kostka prawa B (tryb PR)
+  RIGHT_ANKLE_ROLL = 11,   // Kostka prawa - roll (tryb AB)
+  RIGHT_ANKLE_A = 11,      // Kostka prawa A (tryb PR)
+  
+  // --- PAS/TUŁÓW (12-14) ---
+  WAIST_YAW = 12,          // Pas - obrót (zwykle aktywny)
+  WAIST_ROLL = 13,         // Pas - przechylenie NIEAKTYWNY w G1 23/29DoF z zablokowanym pasem
+  WAIST_A = 13,            // Alternatywna nazwa
+  WAIST_PITCH = 14,        // Pas - pochylenie NIEAKTYWNY w G1 23/29DoF z zablokowanym pasem
+  WAIST_B = 14,            // Alternatywna nazwa
+  
+  // --- LEWE RAMIĘ (15-21) ---
+  LEFT_SHOULDER_PITCH = 15,  // Bark lewy - podnoszenie
+  LEFT_SHOULDER_ROLL = 16,   // Bark lewy - oddalanie od ciała
+  LEFT_SHOULDER_YAW = 17,    // Bark lewy - obrót
+  LEFT_ELBOW = 18,           // Łokieć lewy
+  LEFT_WRIST_ROLL = 19,      // Nadgarstek lewy - obrót
+  LEFT_WRIST_PITCH = 20,     // Nadgarstek lewy - pitch NIEAKTYWNY w G1 23DoF
+  LEFT_WRIST_YAW = 21,       // Nadgarstek lewy - yaw NIEAKTYWNY w G1 23DoF
+  
+  // --- PRAWE RAMIĘ (22-28) ---
+  RIGHT_SHOULDER_PITCH = 22, // Bark prawy - podnoszenie
+  RIGHT_SHOULDER_ROLL = 23,  // Bark prawy - oddalanie od ciała
+  RIGHT_SHOULDER_YAW = 24,   // Bark prawy - obrót
+  RIGHT_ELBOW = 25,          // Łokieć prawy
+  RIGHT_WRIST_ROLL = 26,     // Nadgarstek prawy - obrót
+  RIGHT_WRIST_PITCH = 27,    // Nadgarstek prawy - pitch NIEAKTYWNY w G1 23DoF
+  RIGHT_WRIST_YAW = 28       // Nadgarstek prawy - yaw NIEAKTYWNY w G1 23DoF
 };
 
+// ===== KLASA GŁÓWNA - WYSYŁANIE KOMEND NISKOPOZIOMOWYCH =====
 // Create a low_level_cmd_sender class for low state receive
 class LowLevelCmdSender : public rclcpp::Node {
  public:
