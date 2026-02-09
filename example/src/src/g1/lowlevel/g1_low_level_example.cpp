@@ -1,5 +1,5 @@
 /**
- * Ten przykład demonstrdestruje jak używać ROS2 do wysyłania niskopoziomowych 
+ * Ten przykład demonstruje jak używać ROS2 do wysyłania niskopoziomowych 
  * komend sterowania silnikami robota humanoidalnego Unitree G1.
  * 
  * FUNKCJA: Program pokazuje sterowanie niskopoziomowe G1:

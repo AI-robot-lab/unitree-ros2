@@ -83,7 +83,7 @@ ros2 interface show unitree_go/msg/LowState
 
 ---
 
-## Architekura systemu
+## Architektura systemu
 
 ### Poziomy abstrakcji w robotyce Unitree
 
