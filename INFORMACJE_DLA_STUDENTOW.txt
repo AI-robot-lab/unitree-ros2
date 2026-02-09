@@ -1,0 +1,100 @@
+╔═══════════════════════════════════════════════════════════════════════╗
+║                                                                       ║
+║   WITAMY W REPOZYTORIUM UNITREE ROS2 - WERSJA DLA STUDENTÓW         ║
+║                                                                       ║
+╚═══════════════════════════════════════════════════════════════════════╝
+
+To repozytorium zostało specjalnie przystosowane dla polskich studentów
+uczących się robotyki i pracy z robotem humanoidalnym Unitree G1 EDU.
+
+📚 OD CZEGO ZACZĄĆ?
+═══════════════════
+
+1. Przeczytaj README_PL.md
+   → Instalacja, konfiguracja, pierwsze kroki
+
+2. Przestudiuj docs/PRZEWODNIK_STUDENTA.md
+   → Podstawy ROS2, komunikacja, przykładowe programy
+
+3. Jeśli pracujesz z G1 EDU, przeczytaj docs/G1_EDU_PRAKTYCZNY_PRZEWODNIK.md
+   → Specyfika robota humanoidalnego, bezpieczeństwo
+
+4. Szukasz inspiracji? docs/PRZYKLADY_PROJEKTOW_G1.md
+   → 10 pomysłów na projekty od podstawowych do zaawansowanych
+
+5. Mapa wszystkich zasobów: docs/SPIS_TRESCI.md
+   → Kompletny przewodnik po dokumentacji
+
+
+💻 KOD ŹRÓDŁOWY Z KOMENTARZAMI
+═══════════════════════════════
+
+Wszystkie kluczowe pliki przykładowe mają szczegółowe komentarze po polsku:
+
+• example/src/src/read_motion_state.cpp
+  → Odczyt pozycji, prędkości, stóp
+
+• example/src/src/read_low_state.cpp
+  → IMU, silniki, bateria, diagnostyka
+
+• example/src/src/read_wireless_controller.cpp
+  → Kontroler bezprzewodowy, teleoperacja
+
+• example/src/src/g1/lowlevel/g1_low_level_example.cpp
+  → Niskopoziomowe sterowanie G1 (ZAAWANSOWANE!)
+
+
+🎯 ŚCIEŻKI NAUKI
+════════════════
+
+🟢 POCZĄTKUJĄCY:
+   1. Instalacja i konfiguracja
+   2. Podstawy ROS2 (topiki, wiadomości)
+   3. Pierwsze programy (read_motion_state)
+   4. Projekt: Dashboard monitorujący
+
+🟡 ŚREDNIO-ZAAWANSOWANY:
+   1. Różne poziomy sterowania
+   2. Kontroler bezprzewodowy
+   3. Projekt: Kontroler gestów lub Teleoperacja
+
+🔴 ZAAWANSOWANY (G1 EDU):
+   1. Kinematyka humanoidalna
+   2. Sterowanie niskopoziomowe
+   3. Projekt: Object Pointing, Pick and Place
+
+
+⚠️  BEZPIECZEŃSTWO
+══════════════════
+
+Praca z robotem wymaga ostrożności!
+
+✓ Zawsze testuj nowy kod z robotem bezpiecznie podpartym
+✓ Miej kontroler awaryjny w zasięgu ręki
+✓ Dla G1: zacznij od małych ruchów, stopniowo zwiększaj
+✓ Monitoruj temperatury silników
+✓ Nigdy nie testuj w pobliżu ludzi bez zabezpieczeń
+
+
+🆘 POMOC
+════════
+
+• Problem z instalacją? → README_PL.md (sekcja Konfiguracja)
+• Nie wiesz jak zacząć? → docs/PRZEWODNIK_STUDENTA.md
+• Błąd w kodzie? → GitHub Issues
+• Najczęstsze problemy → docs/PRZEWODNIK_STUDENTA.md (końcowa sekcja)
+
+
+📞 WSPARCIE
+═══════════
+
+GitHub Issues: https://github.com/AI-robot-lab/unitree-ros2/issues
+Dokumentacja Unitree: https://support.unitree.com/
+ROS2 Documentation: https://docs.ros.org/
+
+
+═══════════════════════════════════════════════════════════════════════
+
+Powodzenia w nauce robotyki! 🤖🎓🇵��
+
+═══════════════════════════════════════════════════════════════════════
